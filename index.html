@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>bao 학습플래너</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FFE066">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="bao플래너">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F5F7FC;
+    --paper-line:#DCE3F2;
+    --card:#FFFFFF;
+    --ink:#20293F;
+    --ink-soft:#69738C;
+    --rule:#D9E0EF;
+    --hl-yellow:#FFE066;
+    --hl-yellow-soft:#FFF3C0;
+    --hl-mint:#8FE3C4;
+    --hl-pink:#FFB4C6;
+    --hl-blue:#9FCBFF;
+    --hl-lavender:#C9B8FF;
+    --warn:#FF8A65;
+    --ok:#4CAF7D;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:'Noto Sans KR',system-ui,-apple-system,sans-serif;
+    color:var(--ink);
+    background:
+      linear-gradient(var(--paper-line) 1px, transparent 1px) 0 0/100% 28px,
+      var(--paper);
+  }
+  .app{max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:96px;position:relative}
+
+  /* spiral binding along the left edge, like a real planner page */
+  .app::before{
+    content:"";
+    position:absolute;top:0;bottom:0;left:14px;width:0;
+    border-left:2px dashed #C6CFE6;
+  }
+
+  header{padding:30px 22px 10px 34px;position:relative}
+  .hello{font-family:'Gaegu',cursive;font-size:28px;font-weight:700;line-height:1.1}
+  .date{margin-top:6px;color:var(--ink-soft);font-size:13px;font-weight:500;letter-spacing:.02em}
+
+  .section{padding:0 18px 0 34px;margin-top:14px}
+  .card{
+    background:var(--card);
+    border:1.5px solid var(--rule);
+    border-radius:4px 4px 16px 16px;
+    padding:18px 16px 16px;
+    box-shadow:0 2px 0 var(--rule), 0 8px 18px rgba(32,41,63,.05);
+    position:relative;
+  }
+  .card::before{
+    /* a torn/ruled top edge accent, like a page header rule */
+    content:"";
+    position:absolute;top:0;left:16px;right:16px;height:0;
+    border-top:2px solid var(--hl-yellow);
+    border-radius:2px;
+  }
+  .title-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  h2{font-family:'Gaegu',cursive;font-size:21px;font-weight:700;margin:6px 0 0}
+  .muted{color:var(--ink-soft);font-size:12.5px;font-weight:500}
+
+  .progress-wrap{margin-top:14px;background:#EEF1F9;border-radius:999px;height:14px;overflow:hidden;border:1px solid var(--rule)}
+  .progress{
+    height:100%;
+    width:0%;
+    transition:.3s;
+    background:
+      repeating-linear-gradient(100deg, rgba(255,255,255,.35) 0 6px, rgba(255,255,255,0) 6px 12px),
+      linear-gradient(90deg, var(--hl-yellow), #FFD23F);
+    border-radius:999px 4px 4px 999px;
+  }
+  .goal-meta{margin-top:10px;display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);font-weight:500}
+
+  .task-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+  .task{
+    display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;
+    padding:12px 12px 12px 10px;
+    border:1.5px solid var(--rule);
+    border-left:4px solid var(--hl-blue);
+    border-radius:3px 12px 12px 3px;
+    background:#FCFDFF;
+    transition:.15s;
+  }
+  .task-main{min-width:140px}
+  .task.done{border-left-color:var(--ok);background:#F7FAF8}
+  .task input[type=checkbox]{
+    appearance:none;-webkit-appearance:none;
+    width:21px;height:21px;min-width:21px;margin-top:1px;
+    border:2px solid var(--ink-soft);border-radius:6px;
+    background:#fff;cursor:pointer;position:relative;
+  }
+  .task input[type=checkbox]:checked{
+    background:var(--ok);border-color:var(--ok);
+  }
+  .task input[type=checkbox]:checked::after{
+    content:"";position:absolute;left:5px;top:1px;width:6px;height:11px;
+    border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(38deg);
+  }
+  .task-main{flex:1}
+  .task-title{font-weight:700;font-size:15px}
+  .task.done .task-title{text-decoration:line-through;text-decoration-color:var(--ok);text-decoration-thickness:2px;color:#94A0B8}
+  .task-sub{font-size:12px;color:var(--ink-soft);margin-top:4px;font-weight:500}
+  .subject{
+    display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:3px 8px 8px 3px;
+    background:var(--hl-yellow-soft);color:#8A6A00;margin-right:6px;
+    box-shadow:inset 0 -2px 0 rgba(0,0,0,.03);
+  }
+
+  .btn{border:0;border-radius:4px 10px 10px 4px;padding:11px 14px;font-weight:700;cursor:pointer;font-family:inherit;font-size:14px}
+  .btn-primary{background:var(--ink);color:#fff;box-shadow:0 2px 0 #0d1424}
+  .btn-primary:active{transform:translateY(2px);box-shadow:none}
+  .btn-soft{background:var(--hl-yellow-soft);color:#8A6A00}
+  .btn-full{width:100%;margin-top:14px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .mini{padding:16px 14px;border-radius:4px 14px 14px 4px;background:var(--card);border:1.5px solid var(--rule);border-left:4px solid var(--hl-mint)}
+  .mini:nth-child(2){border-left-color:var(--hl-pink)}
+  .mini strong{font-family:'Gaegu',cursive;font-size:26px;display:block;margin-top:6px}
+
+  .screen{display:none}
+  .screen.active{display:block}
+
+  nav{
+    position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(520px,100%);
+    background:#fff;border-top:1.5px solid var(--rule);
+    display:grid;grid-template-columns:repeat(5,1fr);
+    padding:10px 6px calc(6px + env(safe-area-inset-bottom));z-index:10;
+    box-shadow:0 -6px 16px rgba(32,41,63,.05);
+  }
+  nav button{background:none;border:0;padding:6px 2px;color:var(--ink-soft);font-size:11px;cursor:pointer;font-weight:600;font-family:inherit;border-radius:8px}
+  nav button .icon{display:block;font-size:20px;line-height:1;margin-bottom:4px}
+  nav button.active{color:var(--ink);font-weight:800;background:var(--hl-yellow-soft)}
+
+  .screen-title{font-family:'Gaegu',cursive;font-size:28px;font-weight:700;padding:28px 18px 6px 34px}
+  .form{display:grid;gap:12px}
+  label{font-size:12.5px;font-weight:700;color:var(--ink-soft)}
+  input,select{
+    width:100%;padding:12px;border:1.5px solid var(--rule);border-radius:4px 10px 10px 4px;
+    background:#fff;font-size:14px;font-family:inherit;color:var(--ink);
+  }
+  input:focus,select:focus{outline:2px solid var(--hl-blue);outline-offset:1px;border-color:var(--hl-blue)}
+
+  .month-nav{align-items:center}
+  .month-nav h2{margin:0}
+  .month-nav .btn{padding:8px 14px}
+  .weekday-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:16px;text-align:center;font-size:11px;font-weight:700;color:var(--ink-soft)}
+  .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:6px}
+  .month-cell{
+    aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    border-radius:4px 8px 8px 4px;border:1.5px solid transparent;
+    font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;background:transparent;
+  }
+  .month-cell.empty{cursor:default}
+  .month-cell:not(.empty):hover{background:#F2F5FC}
+  .month-cell.today{background:var(--hl-yellow);border-color:#E6C300;color:#5C4700;font-weight:800}
+  .month-cell.selected{box-shadow:inset 0 0 0 2px var(--ink)}
+  .month-cell .dot{width:5px;height:5px;border-radius:50%;background:var(--hl-blue)}
+  .month-cell.today .dot{background:#5C4700}
+  .task-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .btn-del{background:#FFE3E3;color:#B23B3B;padding:8px 10px;font-size:12.5px;border-radius:4px 8px 8px 4px}
+
+  .timer{
+    font-family:'Gaegu',cursive;font-size:58px;font-weight:700;letter-spacing:-1px;text-align:center;
+    padding:30px 0 10px;
+    background-image:linear-gradient(var(--rule) 1px, transparent 1px);
+    background-size:100% 20px;
+  }
+  .timer-actions{display:flex;justify-content:center;gap:10px}
+  .chip-row{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{border:1.5px solid var(--rule);background:#fff;color:var(--ink-soft);padding:8px 14px;border-radius:999px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit}
+  .chip.active{background:var(--hl-yellow);border-color:#E6C300;color:#5C4700}
+  .bars{display:grid;gap:14px;margin-top:14px}
+  .bar-row{display:grid;grid-template-columns:44px 1fr 48px;gap:10px;align-items:center;font-size:13px;font-weight:700}
+  .bar-bg{height:11px;background:#EEF1F9;border-radius:999px;overflow:hidden;border:1px solid var(--rule)}
+  .bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--hl-mint),#5FD3A6)}
+  .empty{text-align:center;color:var(--ink-soft);padding:26px 0;font-size:14px;font-weight:500}
+
+  .toast{
+    position:fixed;left:50%;transform:translateX(-50%) translateY(6px);bottom:96px;
+    background:var(--ink);color:#fff;padding:10px 16px;border-radius:4px 10px 10px 4px;
+    font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:20;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (min-width:700px){
+    .app{margin-top:22px;margin-bottom:22px;border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(32,41,63,.10);min-height:820px;background-color:var(--paper)}
+    nav{border-radius:0 0 18px 18px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <section id="home" class="screen active">
+    <header>
+      <div class="hello">🎋 <span id="helloName">bao 학습플래너</span> 🐼</div>
+      <div class="date" id="todayLabel"></div>
+    </header>
+    <div class="section" id="examBannerWrap" style="display:none">
+      <div class="card" id="examBanner" style="cursor:pointer;border-left:4px solid var(--warn)">
+        <div class="task-title" id="examBannerText"></div>
+        <div class="muted" style="margin-top:4px">눌러서 오늘 할 일에 추가하기 →</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="card">
+        <div class="title-row"><h2>오늘의 목표</h2><span class="muted" id="goalPercent">0%</span></div>
+        <div class="progress-wrap"><div class="progress" id="goalBar"></div></div>
+        <div class="goal-meta"><span id="goalCount">0개 중 0개 완료</span><span id="goalTime">목표 0분</span></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="card">
+        <div class="title-row"><h2>📚 오늘 할 공부</h2><button class="btn btn-soft" onclick="openAddTask()">+ 추가</button></div>
+        <div class="task-list" id="taskList"></div>
+      </div>
+    </div>
+
+    <div class="section grid2">
+      <div class="mini"><span class="muted">🔥 연속 공부</span><strong id="streak">5일</strong></div>
+      <div class="mini"><span class="muted">📝 가까운 일정</span><strong style="font-size:18px" id="nearestDday">수학시험 D-7</strong></div>
+    </div>
+
+    <div class="section" id="addTaskArea" style="display:none">
+      <div class="card">
+        <div class="title-row"><h2>공부 추가</h2><button class="btn btn-soft" onclick="closeAddTask()">닫기</button></div>
+        <div class="form" style="margin-top:12px">
+          <div><label>과목</label><select id="subjectInput"><option>국어</option><option>영어</option><option selected>수학</option><option>과학</option><option>사회</option><option>기타</option></select></div>
+          <div><label>할 일</label><input id="titleInput" placeholder="예: 문제집 20~30쪽" /></div>
+          <div><label>예상 공부시간(분)</label><input id="minutesInput" type="number" min="5" step="5" value="30" /></div>
+          <button class="btn btn-primary btn-full" onclick="addTask()">오늘 공부에 추가</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="plan" class="screen">
+    <div class="screen-title">월간 계획</div>
+    <div class="section">
+      <div class="card">
+        <div class="title-row month-nav">
+          <button class="btn btn-soft" onclick="changeMonth(-1)">‹</button>
+          <h2 id="monthLabel">2026년 8월</h2>
+          <button class="btn btn-soft" onclick="changeMonth(1)">›</button>
+        </div>
+        <div class="weekday-row"><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span></div>
+        <div class="month-grid" id="monthGrid"></div>
+        <div class="muted" style="margin-top:10px;text-align:center">날짜를 눌러 일정을 확인해요</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="card">
+        <div class="title-row"><h2 id="eventsTitle">다가오는 일정</h2><button class="btn btn-soft" onclick="openAddEvent()">+ 추가</button></div>
+        <div class="task-list" id="eventList"></div>
+      </div>
+    </div>
+    <div class="section" id="addEventArea" style="display:none">
+      <div class="card">
+        <div class="title-row"><h2 id="addEventTitle">일정 추가</h2><button class="btn btn-soft" onclick="closeAddEvent()">닫기</button></div>
+        <div class="form" style="margin-top:12px">
+          <div><label>일정 이름</label><input id="eventTitleInput" placeholder="예: 수학 단원평가" /></div>
+          <div><label>날짜</label><input id="eventDateInput" type="date" /></div>
+          <div><label>시간 (선택)</label><input id="eventTimeInput" type="time" /></div>
+          <button class="btn btn-primary btn-full" id="eventSubmitBtn" onclick="saveEvent()">일정 추가</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="timer" class="screen">
+    <div class="screen-title">집중 타이머</div>
+    <div class="section">
+      <div class="card">
+        <div class="title-row"><h2>집중 공부</h2><span class="muted" id="timerDurLabel">25분 설정</span></div>
+        <div class="timer" id="timerText">25:00</div>
+        <div class="timer-actions">
+          <button class="btn btn-primary" id="startBtn" onclick="toggleTimer()">시작</button>
+          <button class="btn btn-soft" onclick="resetTimer()">초기화</button>
+        </div>
+        <div class="form" style="margin-top:16px">
+          <div>
+            <label>집중 시간</label>
+            <div class="chip-row" id="durChips">
+              <button type="button" class="chip" data-min="10">10분</button>
+              <button type="button" class="chip" data-min="25">25분</button>
+              <button type="button" class="chip" data-min="45">45분</button>
+              <button type="button" class="chip" data-min="60">60분</button>
+            </div>
+            <input id="customMinutesInput" type="number" min="1" step="1" placeholder="직접 입력 (분)" style="margin-top:8px" />
+          </div>
+          <div><label>연결할 할 일</label><select id="timerTaskSelect"></select></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="stats" class="screen">
+    <div class="screen-title">학습 통계</div>
+    <div class="section grid2">
+      <div class="mini"><span class="muted">오늘 공부시간</span><strong id="studyToday">0분</strong></div>
+      <div class="mini"><span class="muted">이번 주 달성률</span><strong id="weekRate">0%</strong></div>
+    </div>
+    <div class="section">
+      <div class="card">
+        <div class="title-row"><h2>과목별 공부시간</h2><span class="muted">이번 주</span></div>
+        <div class="bars" id="subjectBars"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="settings" class="screen">
+    <div class="screen-title">설정</div>
+    <div class="section">
+      <div class="card">
+        <div class="form">
+          <div><label>이름 또는 별명</label><input id="nameInput" placeholder="예: 민준" /></div>
+          <div><label>학년</label><select id="gradeInput"><option>초등학교 4학년</option><option>초등학교 5학년</option><option>초등학교 6학년</option><option>중학교 1학년</option><option>중학교 2학년</option><option>중학교 3학년</option><option>고등학교 1학년</option><option>고등학교 2학년</option><option>고등학교 3학년</option></select></div>
+          <button class="btn btn-primary btn-full" onclick="saveSettings()">설정 저장</button>
+          <button class="btn btn-soft btn-full" onclick="resetAll()">데이터 초기화</button>
+        </div>
+      </div>
+    </div>
+    <div class="section" id="installCardWrap" style="display:none">
+      <div class="card">
+        <div class="title-row"><h2>📲 홈 화면에 추가</h2></div>
+        <div class="muted" style="margin-top:6px">앱처럼 아이콘으로 설치해서 더 빠르게 열 수 있어요.</div>
+        <button class="btn btn-primary btn-full" id="installBtn" style="display:none" onclick="installApp()">홈 화면에 추가</button>
+        <div class="muted" id="iosInstallNote" style="margin-top:10px;display:none">iOS Safari에서는: 하단 공유 버튼 → "홈 화면에 추가"를 눌러주세요.</div>
+      </div>
+    </div>
+  </section>
+
+
+  <nav>
+    <button class="active" data-screen="home"><span class="icon">🏠</span>홈</button>
+    <button data-screen="plan"><span class="icon">🗓️</span>계획</button>
+    <button data-screen="timer"><span class="icon">⏱️</span>타이머</button>
+    <button data-screen="stats"><span class="icon">📊</span>통계</button>
+    <button data-screen="settings"><span class="icon">⚙️</span>설정</button>
+  </nav>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const defaultTasks = [
+  {id:1, subject:'수학', title:'문제집 20~30쪽', minutes:40, done:false},
+  {id:2, subject:'영어', title:'영어 단어 30개', minutes:25, done:true},
+  {id:3, subject:'과학', title:'오답노트 정리', minutes:30, done:false}
+];
+function pad(n){return String(n).padStart(2,'0')}
+function toDateStr(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+function addDays(date,n){const d=new Date(date); d.setDate(d.getDate()+n); return d}
+const todayForDefaults = new Date();
+const defaultEvents = [
+  {id:1, title:'영어 단어시험', date: toDateStr(addDays(todayForDefaults,5))},
+  {id:2, title:'수학 단원평가', date: toDateStr(addDays(todayForDefaults,7))},
+  {id:3, title:'과학 수행평가 제출', date: toDateStr(addDays(todayForDefaults,9))}
+];
+let state = JSON.parse(localStorage.getItem('gongbukok_state') || 'null') || {
+  name:'', grade:'중학교 1학년', tasks:defaultTasks, events:defaultEvents
+};
+if(!state.events){state.events = defaultEvents;}
+if(!state.studyLog){state.studyLog = [];}
+let selectedDate = null;
+let editingEventId = null;
+let currentMonth = (()=>{const d=new Date(); return new Date(d.getFullYear(), d.getMonth(), 1)})();
+function persist(){localStorage.setItem('gongbukok_state', JSON.stringify(state));}
+function formatToday(){
+  const d = new Date();
+  const days=['일','월','화','수','목','금','토'];
+  return `${d.getMonth()+1}월 ${d.getDate()}일 ${days[d.getDay()]}요일`;
+}
+function render(){
+  document.getElementById('todayLabel').textContent = formatToday();
+  document.getElementById('helloName').textContent = state.name ? `${state.name}님의 bao 학습플래너` : 'bao 학습플래너';
+  document.getElementById('nameInput').value = state.name || '';
+  document.getElementById('gradeInput').value = state.grade || '중학교 1학년';
+  const list = document.getElementById('taskList');
+  list.innerHTML='';
+  if(!state.tasks.length){list.innerHTML='<div class="empty">오늘 공부할 내용을 추가해보세요 😊</div>'}
+  state.tasks.forEach(t=>{
+    const el=document.createElement('div'); el.className='task'+(t.done?' done':'');
+    el.innerHTML=`<input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})"><div class="task-main"><div class="task-title"><span class="subject">${t.subject}</span>${escapeHtml(t.title)}</div><div class="task-sub">⏱ ${t.minutes}분</div></div><button class="btn btn-del" onclick="deleteTask(${t.id})">삭제</button>`;
+    list.appendChild(el);
+  });
+  const done=state.tasks.filter(t=>t.done).length, total=state.tasks.length;
+  const pct= total ? Math.round(done/total*100) : 0;
+  document.getElementById('goalPercent').textContent=pct+'%';
+  document.getElementById('goalBar').style.width=pct+'%';
+  document.getElementById('goalCount').textContent=`${total}개 중 ${done}개 완료`;
+  document.getElementById('goalTime').textContent='목표 '+state.tasks.reduce((a,b)=>a+b.minutes,0)+'분';
+  renderMonth();
+  renderEvents();
+  renderHomeDday();
+  renderExamBanner();
+  renderTimerTaskOptions();
+  renderStats();
+}
+function diffDays(dateStr){
+  const d0=new Date(); d0.setHours(0,0,0,0);
+  const d1=new Date(dateStr+'T00:00:00');
+  return Math.round((d1-d0)/86400000);
+}
+function ddayLabel(dateStr){
+  const diff=diffDays(dateStr);
+  if(diff===0) return 'D-day';
+  if(diff>0) return 'D-'+diff;
+  return 'D+'+Math.abs(diff);
+}
+function changeMonth(delta){
+  currentMonth=new Date(currentMonth.getFullYear(), currentMonth.getMonth()+delta, 1);
+  renderMonth();
+}
+function renderMonth(){
+  const grid=document.getElementById('monthGrid');
+  const label=document.getElementById('monthLabel');
+  if(!grid||!label) return;
+  label.textContent=`${currentMonth.getFullYear()}년 ${currentMonth.getMonth()+1}월`;
+  grid.innerHTML='';
+  const firstDay=new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  const startOffset=(firstDay.getDay()+6)%7; // Mon=0 ... Sun=6
+  const daysInMonth=new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 0).getDate();
+  const todayStr=toDateStr(new Date());
+  const eventDates=new Set(state.events.map(e=>e.date));
+  for(let i=0;i<startOffset;i++){
+    const el=document.createElement('div'); el.className='month-cell empty';
+    grid.appendChild(el);
+  }
+  for(let day=1; day<=daysInMonth; day++){
+    const ds=toDateStr(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day));
+    const el=document.createElement('div');
+    el.className='month-cell'+(ds===todayStr?' today':'')+(selectedDate===ds?' selected':'');
+    el.innerHTML=`${day}${eventDates.has(ds)?'<span class="dot"></span>':''}`;
+    el.onclick=()=>{selectedDate = selectedDate===ds? null : ds; renderMonth(); renderEvents();};
+    grid.appendChild(el);
+  }
+}
+function eventSortKey(e){return e.date+' '+(e.time||'99:99')}
+function renderEvents(){
+  const list=document.getElementById('eventList');
+  const title=document.getElementById('eventsTitle');
+  if(!list||!title) return;
+  let events=[...state.events].sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b)));
+  if(selectedDate){
+    events=events.filter(e=>e.date===selectedDate);
+    const d=new Date(selectedDate+'T00:00:00');
+    title.textContent=`${d.getMonth()+1}월 ${d.getDate()}일 일정`;
+  } else {
+    title.textContent='다가오는 일정';
+  }
+  list.innerHTML='';
+  if(!events.length){list.innerHTML='<div class="empty">등록된 일정이 없어요 🙂</div>';return}
+  events.forEach(e=>{
+    const el=document.createElement('div'); el.className='task';
+    const d=new Date(e.date+'T00:00:00');
+    const timeLabel = e.time ? ` ${e.time}` : '';
+    el.innerHTML=`<div class="task-main"><div class="task-title">${escapeHtml(e.title)}</div><div class="task-sub">${d.getMonth()+1}월 ${d.getDate()}일${timeLabel} · ${ddayLabel(e.date)}</div></div><div class="task-actions"><button class="btn btn-soft" onclick="addEventAsTask(${e.id})">+ 오늘 할일</button><button class="btn btn-soft" onclick="openAddEvent(${e.id})">수정</button><button class="btn btn-del" onclick="deleteEvent(${e.id})">삭제</button></div>`;
+    list.appendChild(el);
+  });
+}
+function renderHomeDday(){
+  const el=document.getElementById('nearestDday');
+  if(!el) return;
+  const todayStr=toDateStr(new Date());
+  const upcoming=[...state.events].filter(e=>e.date>=todayStr).sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b)));
+  el.textContent = upcoming.length ? `${upcoming[0].title} ${ddayLabel(upcoming[0].date)}` : '등록된 일정 없음';
+}
+function renderExamBanner(){
+  const wrap=document.getElementById('examBannerWrap');
+  const banner=document.getElementById('examBanner');
+  const textEl=document.getElementById('examBannerText');
+  if(!wrap||!banner||!textEl) return;
+  const soon=[...state.events].filter(e=>{const d=diffDays(e.date); return d>=0 && d<=7;})
+    .sort((a,b)=>eventSortKey(a).localeCompare(eventSortKey(b)));
+  if(!soon.length){wrap.style.display='none'; return;}
+  const ev=soon[0];
+  wrap.style.display='block';
+  textEl.textContent=`⏰ ${ev.title} ${ddayLabel(ev.date)}`;
+  banner.onclick=()=>addEventAsTask(ev.id);
+}
+function weekRangeDates(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const dow=today.getDay();
+  const mondayOffset= dow===0? -6 : 1-dow;
+  const monday=addDays(today,mondayOffset);
+  const days=[];
+  for(let i=0;i<7;i++){days.push(toDateStr(addDays(monday,i)));}
+  return days;
+}
+function renderStats(){
+  const todayEl=document.getElementById('studyToday');
+  const weekEl=document.getElementById('weekRate');
+  const bars=document.getElementById('subjectBars');
+  if(!todayEl||!weekEl||!bars) return;
+  const log=state.studyLog||[];
+  const todayStr=toDateStr(new Date());
+  const todayMinutes=log.filter(l=>l.date===todayStr).reduce((a,b)=>a+b.minutes,0);
+  todayEl.textContent=todayMinutes+'분';
+
+  const weekDays=weekRangeDates();
+  const elapsedDays=weekDays.filter(d=>d<=todayStr);
+  const daysWithStudy=new Set(log.filter(l=>elapsedDays.includes(l.date)).map(l=>l.date));
+  const weekRate= elapsedDays.length ? Math.round((daysWithStudy.size/elapsedDays.length)*100) : 0;
+  weekEl.textContent=weekRate+'%';
+
+  const weekSet=new Set(weekDays);
+  const totals={};
+  log.filter(l=>weekSet.has(l.date)).forEach(l=>{totals[l.subject]=(totals[l.subject]||0)+l.minutes;});
+  const entries=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  bars.innerHTML='';
+  if(!entries.length){
+    bars.innerHTML='<div class="empty">이번 주 공부 기록이 아직 없어요.<br>타이머로 기록을 남겨보세요! ⏱️</div>';
+    return;
+  }
+  const maxVal=Math.max(...entries.map(e=>e[1]));
+  entries.forEach(([subj,min])=>{
+    const pct=Math.round(min/maxVal*100);
+    const row=document.createElement('div'); row.className='bar-row';
+    row.innerHTML=`<span>${escapeHtml(subj)}</span><div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div><b>${min}분</b>`;
+    bars.appendChild(row);
+  });
+}
+function openAddEvent(id){
+  editingEventId = id || null;
+  document.getElementById('addEventArea').style.display='block';
+  document.getElementById('addEventTitle').textContent = editingEventId ? '일정 수정' : '일정 추가';
+  document.getElementById('eventSubmitBtn').textContent = editingEventId ? '수정 저장' : '일정 추가';
+  if(editingEventId){
+    const ev=state.events.find(e=>e.id===editingEventId);
+    document.getElementById('eventTitleInput').value = ev ? ev.title : '';
+    document.getElementById('eventDateInput').value = ev ? ev.date : (selectedDate||toDateStr(new Date()));
+    document.getElementById('eventTimeInput').value = ev && ev.time ? ev.time : '';
+  } else {
+    document.getElementById('eventTitleInput').value='';
+    document.getElementById('eventDateInput').value = selectedDate||toDateStr(new Date());
+    document.getElementById('eventTimeInput').value='';
+  }
+  setTimeout(()=>document.getElementById('eventTitleInput').focus(),50);
+}
+function closeAddEvent(){editingEventId=null; document.getElementById('addEventArea').style.display='none'}
+function saveEvent(){
+  const title=document.getElementById('eventTitleInput').value.trim();
+  const date=document.getElementById('eventDateInput').value;
+  const time=document.getElementById('eventTimeInput').value;
+  if(!title||!date){toast('일정 이름과 날짜를 입력해주세요.');return}
+  if(editingEventId){
+    const ev=state.events.find(e=>e.id===editingEventId);
+    if(ev){ev.title=title; ev.date=date; ev.time=time;}
+    persist(); renderMonth(); renderEvents(); renderHomeDday(); renderExamBanner(); closeAddEvent(); toast('일정을 수정했어요!');
+  } else {
+    state.events.push({id:Date.now(),title,date,time});
+    persist(); renderMonth(); renderEvents(); renderHomeDday(); renderExamBanner(); closeAddEvent(); toast('일정을 추가했어요!');
+  }
+}
+function deleteEvent(id){
+  state.events=state.events.filter(e=>e.id!==id);
+  if(editingEventId===id) closeAddEvent();
+  persist(); renderMonth(); renderEvents(); renderHomeDday(); renderExamBanner();
+}
+function escapeHtml(s){return s.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function toggleTask(id){const t=state.tasks.find(x=>x.id===id); if(t){t.done=!t.done;persist();render();}}
+function deleteTask(id){state.tasks=state.tasks.filter(t=>t.id!==id); persist(); render(); toast('할 일을 삭제했어요.');}
+function openAddTask(){document.getElementById('addTaskArea').style.display='block';setTimeout(()=>document.getElementById('titleInput').focus(),50)}
+function closeAddTask(){document.getElementById('addTaskArea').style.display='none'}
+function addTask(){
+  const title=document.getElementById('titleInput').value.trim();
+  const subject=document.getElementById('subjectInput').value;
+  const minutes=Math.max(5,parseInt(document.getElementById('minutesInput').value||30));
+  if(!title){toast('할 일을 입력해주세요.');return}
+  state.tasks.push({id:Date.now(),subject,title,minutes,done:false});
+  document.getElementById('titleInput').value=''; persist(); render(); closeAddTask(); toast('오늘 공부에 추가했어요!');
+}
+function saveSettings(){state.name=document.getElementById('nameInput').value.trim(); state.grade=document.getElementById('gradeInput').value; persist(); render(); toast('설정을 저장했어요.');}
+function resetAll(){if(confirm('저장된 공부 계획을 초기화할까요?')){state={name:'',grade:'중학교 1학년',tasks:[...defaultTasks],events:[...defaultEvents],studyLog:[]};selectedDate=null;editingEventId=null;currentMonth=new Date(new Date().getFullYear(), new Date().getMonth(), 1);persist();render();toast('초기화했어요.')}}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1500)}
+
+function goToScreen(id){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.screen===id));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active', s.id===id));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('nav button').forEach(btn=>btn.addEventListener('click',()=>goToScreen(btn.dataset.screen)));
+
+function addEventAsTask(id){
+  const ev=state.events.find(e=>e.id===id);
+  if(!ev) return;
+  goToScreen('home');
+  openAddTask();
+  document.getElementById('titleInput').value=ev.title;
+}
+
+function renderTimerTaskOptions(){
+  const sel=document.getElementById('timerTaskSelect');
+  if(!sel) return;
+  const prev=sel.value;
+  const openTasks=state.tasks.filter(t=>!t.done);
+  sel.innerHTML='<option value="">선택 안 함 (자유 학습)</option>'+
+    openTasks.map(t=>`<option value="${t.id}">${escapeHtml(t.subject)} · ${escapeHtml(t.title)}</option>`).join('');
+  if([...sel.options].some(o=>o.value===prev)) sel.value=prev;
+}
+let timerDurationMin=25, timerSec=timerDurationMin*60, timerHandle=null;
+const durationPresets=[10,25,45,60];
+function updateTimer(){const m=String(Math.floor(timerSec/60)).padStart(2,'0'); const s=String(timerSec%60).padStart(2,'0'); document.getElementById('timerText').textContent=`${m}:${s}`}
+function updateDurationUI(){
+  document.getElementById('timerDurLabel').textContent=`${timerDurationMin}분 설정`;
+  document.querySelectorAll('#durChips .chip').forEach(ch=>{
+    ch.classList.toggle('active', parseInt(ch.dataset.min)===timerDurationMin);
+  });
+  const custom=document.getElementById('customMinutesInput');
+  custom.value = durationPresets.includes(timerDurationMin) ? '' : timerDurationMin;
+}
+function setDuration(min){
+  if(!min || min<1) return;
+  if(timerHandle){toast('타이머를 멈추고 시간을 바꿔주세요.');return}
+  timerDurationMin=min; timerSec=min*60; updateTimer(); updateDurationUI();
+}
+document.querySelectorAll('#durChips .chip').forEach(ch=>ch.addEventListener('click',()=>setDuration(parseInt(ch.dataset.min))));
+document.getElementById('customMinutesInput').addEventListener('change',e=>setDuration(parseInt(e.target.value)));
+function toggleTimer(){
+  const btn=document.getElementById('startBtn');
+  if(timerHandle){clearInterval(timerHandle);timerHandle=null;btn.textContent='계속';return}
+  btn.textContent='일시정지';
+  timerHandle=setInterval(()=>{
+    timerSec--;updateTimer();
+    if(timerSec<=0){
+      clearInterval(timerHandle);timerHandle=null;btn.textContent='시작';
+      completeTimerSession();
+      timerSec=timerDurationMin*60;updateTimer();
+    }
+  },1000)
+}
+function completeTimerSession(){
+  const sel=document.getElementById('timerTaskSelect');
+  const taskId=sel.value;
+  const task=taskId? state.tasks.find(t=>String(t.id)===String(taskId)) : null;
+  const subject=task? task.subject : '기타';
+  state.studyLog=state.studyLog||[];
+  state.studyLog.push({date:toDateStr(new Date()),subject,minutes:timerDurationMin,taskId:task?task.id:null});
+  if(task){task.done=true;}
+  persist();
+  render();
+  toast(task? `${timerDurationMin}분 집중 완료! '${task.title}' 완료 처리했어요 🎉` : `${timerDurationMin}분 집중 완료! 기록했어요 🎉`);
+}
+function resetTimer(){if(timerHandle){clearInterval(timerHandle);timerHandle=null} timerSec=timerDurationMin*60;updateTimer();document.getElementById('startBtn').textContent='시작'}
+updateTimer();updateDurationUI();render();
+
+// --- PWA: install prompt + service worker ---
+let deferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt=e;
+  document.getElementById('installCardWrap').style.display='block';
+  document.getElementById('installBtn').style.display='block';
+});
+function installApp(){
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.finally(()=>{
+    deferredInstallPrompt=null;
+    document.getElementById('installBtn').style.display='none';
+  });
+}
+window.addEventListener('appinstalled', ()=>{
+  toast('앱이 설치됐어요! 🎉');
+  document.getElementById('installCardWrap').style.display='none';
+});
+(function showIosInstallNoteIfNeeded(){
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+  if(isIos && !isStandalone){
+    document.getElementById('installCardWrap').style.display='block';
+    document.getElementById('iosInstallNote').style.display='block';
+  }
+})();
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.log('SW 등록 실패(파일을 직접 열었거나 https가 아닐 수 있어요):', err));
+  });
+}
+
+</script>
+</body>
+</html>
