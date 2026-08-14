@@ -231,7 +231,7 @@
     </div>
 
     <div class="section grid2">
-      <div class="mini"><span class="muted">🔥 연속 공부</span><strong id="streak">5일</strong></div>
+      <div class="mini"><span class="muted">🔥 연속 공부</span><strong id="streak">0일</strong></div>
       <div class="mini"><span class="muted">📝 가까운 일정</span><strong style="font-size:18px" id="nearestDday">수학시험 D-7</strong></div>
     </div>
 
@@ -500,10 +500,33 @@ function weekRangeDates(){
   for(let i=0;i<7;i++){days.push(toDateStr(addDays(monday,i)));}
   return days;
 }
+function computeStreak(){
+  const log=state.studyLog||[];
+  const studyDates=new Set(log.map(l=>l.date));
+  const todayStr=toDateStr(new Date());
+  let streak=0;
+  let cursor=new Date(); cursor.setHours(0,0,0,0);
+  for(let i=0;i<3650;i++){
+    const dow=cursor.getDay();
+    if(dow===0||dow===6){ cursor=addDays(cursor,-1); continue; } // 주말은 건너뛰고 스트릭에 영향 없음
+    const ds=toDateStr(cursor);
+    if(studyDates.has(ds)){
+      streak++;
+    } else if(ds===todayStr){
+      // 오늘은 아직 안 끝났으니 기록이 없어도 스트릭을 끊지 않고 건너뜀
+    } else {
+      break;
+    }
+    cursor=addDays(cursor,-1);
+  }
+  return streak;
+}
 function renderStats(){
   const todayEl=document.getElementById('studyToday');
   const weekEl=document.getElementById('weekRate');
   const bars=document.getElementById('subjectBars');
+  const streakEl=document.getElementById('streak');
+  if(streakEl) streakEl.textContent=computeStreak()+'일';
   if(!todayEl||!weekEl||!bars) return;
   const log=state.studyLog||[];
   const todayStr=toDateStr(new Date());
